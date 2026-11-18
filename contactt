@@ -1,0 +1,407 @@
+
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
+#include <sstream>
+#include <algorithm>
+#include <cctype>
+#include <limits>
+
+using namespace std;
+
+// Structure to store contact details
+struct Contact {
+    string name;
+    string phone;
+    string email;
+    string address;
+};
+
+// Global vector to store contacts
+vector<Contact> contacts;
+
+// File name
+const string FILE_NAME = "contacts.txt";
+
+// Check whether text is valid for file storage
+bool validText(const string& value) {
+    return !value.empty() &&
+           value.find('|') == string::npos &&
+           value.find('\n') == string::npos &&
+           value.find('\r') == string::npos;
+}
+
+// Convert string to lowercase
+string toLowerCase(string text) {
+    transform(text.begin(), text.end(), text.begin(),
+        [](unsigned char c) {
+            return static_cast<char>(tolower(c));
+        });
+
+    return text;
+}
+
+// Find contact using phone number
+int findContactByPhone(const string& phone) {
+
+    for (int i = 0; i < (int)contacts.size(); i++) {
+
+        if (contacts[i].phone == phone) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+// ================= SAVE CONTACTS =================
+
+void saveContacts() {
+
+    ofstream file(FILE_NAME);
+
+    if (!file) {
+        cout << "Error: Unable to save contacts!\n";
+        return;
+    }
+
+    for (const auto& c : contacts) {
+
+        file << c.name << "|"
+             << c.phone << "|"
+             << c.email << "|"
+             << c.address << "\n";
+    }
+
+    file.close();
+}
+
+// ================= LOAD CONTACTS =================
+
+void loadContacts() {
+
+    ifstream file(FILE_NAME);
+
+    if (!file) {
+        return;
+    }
+
+    string line;
+
+    while (getline(file, line)) {
+
+        stringstream ss(line);
+
+        Contact c;
+
+        if (!getline(ss, c.name, '|') ||
+            !getline(ss, c.phone, '|') ||
+            !getline(ss, c.email, '|') ||
+            !getline(ss, c.address)) {
+            continue;
+        }
+
+        // Skip invalid or duplicate records
+        if (!validText(c.name) ||
+            !validText(c.phone) ||
+            !validText(c.email) ||
+            !validText(c.address) ||
+            findContactByPhone(c.phone) != -1) {
+            continue;
+        }
+
+        contacts.push_back(c);
+    }
+
+    file.close();
+}
+
+// ================= ADD CONTACT =================
+
+void addContact() {
+
+    Contact c;
+
+    cout << "\n===== ADD NEW CONTACT =====\n";
+
+    cout << "Enter Name: ";
+    getline(cin, c.name);
+
+    cout << "Enter Phone: ";
+    getline(cin, c.phone);
+
+    cout << "Enter Email: ";
+    getline(cin, c.email);
+
+    cout << "Enter Address: ";
+    getline(cin, c.address);
+
+    if (!validText(c.name) ||
+        !validText(c.phone) ||
+        !validText(c.email) ||
+        !validText(c.address)) {
+
+        cout << "Invalid or empty details!\n";
+        return;
+    }
+
+    if (findContactByPhone(c.phone) != -1) {
+
+        cout << "Phone number already exists!\n";
+        return;
+    }
+
+    contacts.push_back(c);
+
+    saveContacts();
+
+    cout << "\nContact added successfully!\n";
+}
+
+// ================= VIEW CONTACTS =================
+
+void viewContacts() {
+
+    cout << "\n===== ALL CONTACTS =====\n";
+
+    if (contacts.empty()) {
+
+        cout << "No contacts available.\n";
+        return;
+    }
+
+    for (int i = 0; i < (int)contacts.size(); i++) {
+
+        cout << "\nContact " << i + 1 << "\n";
+
+        cout << "Name    : " << contacts[i].name << "\n";
+        cout << "Phone   : " << contacts[i].phone << "\n";
+        cout << "Email   : " << contacts[i].email << "\n";
+        cout << "Address : " << contacts[i].address << "\n";
+
+        cout << "-------------------------\n";
+    }
+}
+
+// ================= SEARCH CONTACT =================
+
+void searchContact() {
+
+    string searchValue;
+
+    cout << "\nEnter Name or Phone to search: ";
+    getline(cin, searchValue);
+
+    bool found = false;
+
+    string searchLower = toLowerCase(searchValue);
+
+    for (const auto& c : contacts) {
+
+        string nameLower = toLowerCase(c.name);
+
+        // Partial, case-insensitive name search
+        // or exact phone number search
+        if (nameLower.find(searchLower) != string::npos ||
+            c.phone == searchValue) {
+
+            cout << "\nContact Found!\n";
+
+            cout << "Name    : " << c.name << "\n";
+            cout << "Phone   : " << c.phone << "\n";
+            cout << "Email   : " << c.email << "\n";
+            cout << "Address : " << c.address << "\n";
+
+            found = true;
+        }
+    }
+
+    if (!found) {
+        cout << "Contact not found!\n";
+    }
+}
+
+// ================= EDIT CONTACT =================
+
+void editContact() {
+
+    string phone;
+
+    cout << "\nEnter phone number of contact to edit: ";
+    getline(cin, phone);
+
+    int index = findContactByPhone(phone);
+
+    if (index == -1) {
+
+        cout << "Contact not found!\n";
+        return;
+    }
+
+    cout << "\nEnter New Details\n";
+
+    Contact updated;
+
+    cout << "New Name: ";
+    getline(cin, updated.name);
+
+    cout << "New Phone: ";
+    getline(cin, updated.phone);
+
+    cout << "New Email: ";
+    getline(cin, updated.email);
+
+    cout << "New Address: ";
+    getline(cin, updated.address);
+
+    if (!validText(updated.name) ||
+        !validText(updated.phone) ||
+        !validText(updated.email) ||
+        !validText(updated.address)) {
+
+        cout << "Invalid or empty details!\n";
+        return;
+    }
+
+    int duplicateIndex = findContactByPhone(updated.phone);
+
+    if (duplicateIndex != -1 && duplicateIndex != index) {
+
+        cout << "Phone number already belongs to another contact!\n";
+        return;
+    }
+
+    contacts[index] = updated;
+
+    saveContacts();
+
+    cout << "Contact updated successfully!\n";
+}
+
+// ================= DELETE CONTACT =================
+
+void deleteContact() {
+
+    string phone;
+
+    cout << "\nEnter phone number to delete: ";
+    getline(cin, phone);
+
+    int index = findContactByPhone(phone);
+
+    if (index == -1) {
+
+        cout << "Contact not found!\n";
+        return;
+    }
+
+    cout << "Contact Name: " << contacts[index].name << "\n";
+
+    char confirm;
+
+    cout << "Are you sure you want to delete? (Y/N): ";
+    cin >> confirm;
+
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+    if (confirm == 'Y' || confirm == 'y') {
+
+        contacts.erase(contacts.begin() + index);
+
+        saveContacts();
+
+        cout << "Contact deleted successfully!\n";
+    }
+    else {
+
+        cout << "Delete operation cancelled.\n";
+    }
+}
+
+// ================= MAIN MENU =================
+
+void menu() {
+
+    int choice;
+
+    do {
+
+        cout << "\n================================\n";
+        cout << "       CONTACT BOOK SYSTEM\n";
+        cout << "================================\n";
+
+        cout << "1. Add Contact\n";
+        cout << "2. View All Contacts\n";
+        cout << "3. Search Contact\n";
+        cout << "4. Edit Contact\n";
+        cout << "5. Delete Contact\n";
+        cout << "6. Exit\n";
+
+        cout << "Enter your choice: ";
+
+        if (!(cin >> choice)) {
+
+            cout << "Invalid input! Enter a number.\n";
+
+            cin.clear();
+
+            cin.ignore(
+                numeric_limits<streamsize>::max(), '\n'
+            );
+
+            continue;
+        }
+
+        cin.ignore(
+            numeric_limits<streamsize>::max(), '\n'
+        );
+
+        switch (choice) {
+
+            case 1:
+                addContact();
+                break;
+
+            case 2:
+                viewContacts();
+                break;
+
+            case 3:
+                searchContact();
+                break;
+
+            case 4:
+                editContact();
+                break;
+
+            case 5:
+                deleteContact();
+                break;
+
+            case 6:
+                saveContacts();
+                cout << "Contacts saved successfully!\n";
+                cout << "Thank you for using Contact Book!\n";
+                break;
+
+            default:
+                cout << "Invalid choice! Try again.\n";
+        }
+
+    } while (choice != 6);
+}
+
+// ================= MAIN FUNCTION =================
+
+int main() {
+
+    // Load previously saved contacts
+    loadContacts();
+
+    cout << "Welcome to Contact Book Management System!\n";
+
+    menu();
+
+    return 0;
+}
